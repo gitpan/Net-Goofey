@@ -1,14 +1,21 @@
 #!/usr/bin/perl -w
 #
 # Example Goofey client using Net::Goofey
-#
-# Last updated by gossamer on Tue Aug 11 22:22:06 EST 1998
+# 
+# ObLegalStuff:
+#    Copyright (c) 1998 Bek Oberin. All rights reserved. This program is
+#    free software; you can redistribute it and/or modify it under the
+#    same terms as Perl itself.
+# 
+# Last updated by gossamer on Fri Aug 28 17:31:20 EST 1998
 #
 
 use strict;
-use Net::Goofey;
-
 use Getopt::Std;
+
+use Text::LineEditor;
+
+use Net::Goofey;
 
 
 my %opt;
@@ -37,9 +44,7 @@ if ($opt{"h"}) {
    # help requested
    &user_help();
    exit;
-}
-
-if ($opt{"v"}) {
+} elsif ($opt{"v"}) {
    # version number
    print "Basic Net::Goofey client built with " . Net::Goofey::version() . "\n";
    exit;
@@ -59,9 +64,10 @@ if ($opt{"w"}) {
    print $Goofey->list($opt{"l"});
 
 } elsif ($opt{"s"}) {
-   my $text;
+   my $text = line_editor();
 
-   print $Goofey->send($opt{"s"}, "foo");
+   print $Goofey->send($opt{"s"}, $text);
+
 } elsif (!%opt) {
    # No options, register as resident goofey
 
@@ -84,6 +90,18 @@ if ($opt{"w"}) {
       # Try to accept a connection
       # If we have one, answer it properly
       # else continue
+      my($message_type, $message_data) = $Goofey->listen();
+
+      print STDERR "Client:  message type:  '$message_type'\n";
+      print STDERR "Client:  message data:  '$message_data'\n";
+
+      if ($message_type eq $Goofey_Exit) {
+         die "Goofey:  Died at server request.\n";
+      } elsif ($message_type eq $Goofey_Message) {
+         print "Goofey Message:\n$message_data\n\n";
+      } else {
+         die "Goofey:  Unknown message type: '$message_type'";
+      }
 
    }
 

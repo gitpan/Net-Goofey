@@ -1,8 +1,13 @@
 package Net::Goofey;
 #
 # Perl interface to the Goofey server.
-#
-# Last updated by gossamer on Wed Jul 15 15:20:23 EST 1998
+# 
+# ObLegalStuff:
+#    Copyright (c) 1998 Bek Oberin. All rights reserved. This program is
+#    free software; you can redistribute it and/or modify it under the
+#    same terms as Perl itself.
+# 
+# Last updated by gossamer on Fri Aug 28 17:30:59 EST 1998
 #
 
 use strict;
@@ -16,12 +21,10 @@ use Symbol;
 use Fcntl;
 use Carp;
 
-require 'dumpvar.pl';
-
 @ISA = qw(Exporter);
-@EXPORT = qw( Default_Goofey_Port );
+@EXPORT = qw( $Goofey_Exit $Goofey_Message );
 @EXPORT_OK = qw();
-$VERSION = "0.3";
+$VERSION = "0.9";
 
 
 =head1 NAME
@@ -46,6 +49,11 @@ Perl.
 # Some constants                                                  #
 ###################################################################
 
+# Messages returned by server
+my $Goofey_Exit = 'E';
+my $Goofey_Idletime = 'W';
+my $Goofey_Message = 'Z';
+
 my $Default_Goofey_Port = 3987;
 my $Default_Goofey_Host = "pluto.cc.monash.edu.au";
 
@@ -54,7 +62,7 @@ my $Client_Version = "3.51";  # This matches the ver of the base client we are i
 
 my $Password_File = $ENV{"HOME"} . "/.goofeypw";
 
-my $DEBUG = 1;
+my $DEBUG = 0;
 
 ###################################################################
 # Functions under here are member functions                       #
@@ -102,6 +110,7 @@ sub new {
 
    # open the connection
    $self->{"socket"} = new IO::Socket::INET (
+      Proto => "tcp",
       PeerAddr => $self->{"host"},
       PeerPort => $self->{"port"},
    );
@@ -138,7 +147,7 @@ sub signon {
       die "Can't find an incoming port\n";
 
    # Empty command - register us as the main client
-   return $self->send_request($self->build_request(""));
+   return $self->send_message($self->build_message(""));
 
 }
 
@@ -155,7 +164,7 @@ sub send {
    my $username = shift;
    my $message = shift;
 
-   return $self->do_request("s $username $message");
+   return $self->do_message("s $username $message");
 }
 
 =head1 unsend ( USERNAME );
@@ -170,13 +179,12 @@ sub unsend {
    my $username = shift;
    my $message = shift;
 
-   return $self->do_request("s! $username");
+   return $self->do_message("s! $username");
 }
 
 =head1 who ([USERNAME]);
 
-Do a goofey -w (who) command on a user or on all users currently
-connected.
+List  that  user's  finger  information.
 
 =cut
 
@@ -184,21 +192,22 @@ sub who {
    my $self = shift;
    my $username = shift;
 
-   return $self->do_request("w $username");
+   return $self->do_message("w $username");
 }
 
 =head1 list ([USERNAME]);
 
-Do a goofey -l (list) command on a user or on all users currently
-connected.
-
+List the locations and idle times of user.  If user is empty then all
+users are listed, but their  idle times  are not queried: the last
+obtained idle time is printed.  Users those idle times are more than 1
+hour are not listed.  
 =cut
 
 sub list {
    my $self = shift;
    my $username = shift;
    
-   return $self->do_request("l $username");
+   return $self->do_message("l $username");
 }
 
 =head1 quiet ();
@@ -212,7 +221,7 @@ alias, though.
 sub quiet {
    my $self = shift;
    
-   return $self->do_request("Q-");
+   return $self->do_message("Q-");
 }
 
 =head1 quietall ();
@@ -224,7 +233,7 @@ Sets you quiet to everybody.
 sub quietall {
    my $self = shift;
    
-   return $self->do_request("Q!");
+   return $self->do_message("Q!");
 }
 
 =head1 unquiet ();
@@ -236,7 +245,62 @@ Sets you unquiet.
 sub unquiet {
    my $self = shift;
    
-   return $self->do_request("Q+");
+   return $self->do_message("Q+");
+}
+
+=head1 listen ( );
+
+Listens for a command from the Goofey server.  If we don't already
+have an open port to them, opens it.
+
+=cut
+
+sub listen {
+   my $self = shift;
+
+   my $done;
+   my ($message_type, $message);
+
+   do {
+      if (!$self->{"incoming_socket"}) {
+         # open the connection
+         $self->{"incoming_socket"} = new IO::Socket::INET (
+            Proto => "tcp",
+            LocalPort => $self->{"incoming_port"},
+            Listen => 1,
+            Reuse => 1,
+         );
+         croak "new: incoming socket: $!" unless $self->{"incoming_socket"};
+      }
+
+      # listening ...
+      my $client = $self->{"incoming_socket"}->accept();
+
+      while (<$client>) {
+         $message .= $_;
+      }
+
+      #($message_type, $message) = $message =~ /^(.)\s+(.*)$/;
+      #($message_type, $message) = $message =~ /^(.)\s+(.*)$/;
+      $message_type = substr($message,0,1);
+      substr($message,0,1) = "";
+      print STDERR "Message Type: '$message_type'\n" if $DEBUG;
+      print STDERR "Message: '$message'\n" if $DEBUG;
+
+
+      if ($message_type eq $Goofey_Idletime) {
+         print $client &get_idletime();
+         $done = 0;
+      } elsif ($message_type eq $Goofey_Message) {
+         print $message;
+      } else {
+         $done = 1;
+      }
+      close $client;
+   } until $done;
+
+   return $message_type, $message;
+
 }
 
 =head1 version ( );
@@ -255,11 +319,24 @@ sub version {
 # Functions under here are helper functions                       #
 ###################################################################
 
-sub send_request {
+#
+# Does the whole build-send-getanswer thing
+#
+sub do_message {
    my $self = shift;
-   my $request = shift;
+   my $command = shift;
 
-   if (!defined(syswrite($self->{"socket"}, $request, length($request)))) {
+   $self->send_message($self->build_message('*' . $command));
+   shutdown($self->{"socket"},1);
+
+   return $self->get_answer();
+}
+
+sub send_message {
+   my $self = shift;
+   my $message = shift;
+
+   if (!defined(syswrite($self->{"socket"}, $message, length($message)))) {
       warn "syswrite: $!";
       return 0;
    }
@@ -282,36 +359,23 @@ sub get_answer {
 
 }
 
-sub build_request {
+sub build_message {
    my $self = shift;
    my $command = shift;
 
-   my $request = "#" . $Client_Type . $Client_Version . "," . 
+   my $message = "#" . $Client_Type . $Client_Version . "," . 
           $self->{"extended_options"} . 
           $self->{"username"} . "," .
           $self->{"password"} . "," .
           $self->{"incoming_port"} . "," .
           $self->{"tty"};
   if ($command) {
-     $request .= "," . $command;
+     $message .= "," . $command;
   }
   
-  $request .= "\n";
+  $message .= "\n";
 
-  return $request;
-}
-
-#
-# Does the whole build-send-getanswer thing
-#
-sub do_request {
-   my $self = shift;
-   my $command = shift;
-
-   $self->send_request($self->build_request('*' . $command));
-   shutdown($self->{"socket"},1);
-
-   return $self->get_answer();
+  return $message;
 }
 
 # Reads password from the file
@@ -326,6 +390,12 @@ sub find_password {
    return $password;
 }
 
+sub get_idletime {
+   # XXX fixme!
+
+   return 0;
+}
+
 # Searches for a port that the server can use to talk to us
 sub find_incoming_port {
    my $port = 9473;
@@ -335,14 +405,17 @@ sub find_incoming_port {
 
 =pod
 
-=head1 AUTHORS
+=head1 AUTHOR
 
-Kirrily Robert <skud@monash.edu.au> and Bek Oberin
-<gossamer@tertius.net.au>
+Bek Oberin <gossamer@tertius.net.au>
+
+=head1 CREDITS
+
+Kirrily Robert <skud@monash.edu.au>
 
 =head1 COPYRIGHT
 
-Copyright (c) 1998 Kirrily Robert & Bek Oberin.  All rights reserved.
+Copyright (c) 1998 Bek Oberin.  All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,42 +1,31 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl test.pl'
 
-######################### We start with some black magic to print on failure.
-
-# Change 1..1 below to 1..last_test_to_print .
-# (It may become useful if the test is moved to ./t subdirectory.)
-
-BEGIN { $| = 1; print "1..3\n"; }
+BEGIN { $| = 1; print "1..4\n"; }
 END {print "not ok 1\n" unless $loaded;}
+
 use Net::Goofey;
 $loaded = 1;
 print "ok 1\n";
-
-######################### End of black magic.
-
-# Insert your test code below (better if it prints "ok 13"
-# (correspondingly "not ok 13") depending on the success of chunk 13
-# of the test code):
 
 # Connect
 #my $Goofey = Net::Goofey->new("gossamer", "1uYpXRVnt+");
 my $Goofey = Net::Goofey->new();
 if ($Goofey) {
-   print "ok connect\n";
+   print "ok 2\n";
 } else {
-   print "not ok connect\n";
+   print "not ok 2\n";
 }
 
 if ($Goofey->who("skud")) {
-   print "ok who\n";
+   print "ok 3\n";
 } else {
-   print "not ok who\n";
+   print "not ok 3\n";
 }
 
-if ($Goofey->send("gossamer", 
-                  `whoami` . " just tested Net::Goofey on " . `uname -a`)) {
-   print "ok send\n";
+if ($Goofey->send("gossamer", "foo")) {
+                  #`whoami` . " just tested Net::Goofey on " . `uname -a`)) {
+   print "ok 4\n";
 } else {
-   print "not ok send\n";
+   print "not ok 4\n";
 }
 
+return 1;

@@ -1,0 +1,33 @@
+
+Net::Goofey
+
+
+This is a really simple module for communicating with a Goofey server.
+
+Goofey is a bit like IRC and a bit like ICQ and a bit like email, it's
+used mostly at Monash University.  See the Goofey web page at:
+   http://www.cs.monash.edu.au/~tym/goofey.html
+
+
+Contacting me:  gossamer@tertius.net.au is best.
+
+
+Notes:
+
+   Client.pl is pretty complete.
+
+
+   If you want to write your own client using Net::Goofey, note that
+   you can use do_request to either bypass the built_in functions or
+   to add new functionality.  It just takes arguments of anything you
+   would put on the regular goofey command line, eg to get the
+   functionality of 'goofey -N' just execute
+      &do_request('N');
+
+
+
+ObLegalStuff:
+   Copyright (c) 1998 Bek Oberin. All rights reserved. This program is
+   free software; you can redistribute it and/or modify it under the
+   same terms as Perl itself.
+

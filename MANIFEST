@@ -1,6 +1,10 @@
-Changes
-Net/Goofey.pm
+Goofey.pm
 MANIFEST
+README
 Makefile.PL
 test.pl
 client.pl
+docs/clients
+docs/goofey.c
+docs/goofey.man
+docs/protocol.man
