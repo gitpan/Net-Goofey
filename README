@@ -8,26 +8,38 @@ Goofey is a bit like IRC and a bit like ICQ and a bit like email, it's
 used mostly at Monash University.  See the Goofey web page at:
    http://www.cs.monash.edu.au/~tym/goofey.html
 
+INSTALLING
+==========
 
-Contacting me:  gossamer@tertius.net.au is best.
+After unzipping and untarring the distribution directory, you install
+the library by running these commands:
 
+   perl Makefile.PL
+   make
+   make test
+   make install
 
-Notes:
-
-   Client.pl is pretty complete.
-
-
-   If you want to write your own client using Net::Goofey, note that
-   you can use do_request to either bypass the built_in functions or
-   to add new functionality.  It just takes arguments of anything you
-   would put on the regular goofey command line, eg to get the
-   functionality of 'goofey -N' just execute
-      &do_request('N');
+NOTE:  You'll need a Goofey username/password to 'make test'
+       successfully.
 
 
+CONTACTS
+========
 
-ObLegalStuff:
-   Copyright (c) 1998 Bek Oberin. All rights reserved. This program is
-   free software; you can redistribute it and/or modify it under the
-   same terms as Perl itself.
+   To contact me directly, <URL:mailto:gossamer@tertius.net.au> is
+   best.
+  
+   You can always find the latest Net::Goofey on my web page at
+      http://www.tertius.net.au/~gossamer/code/Net-Goofey/
+   and CPAN.
+
+
+DISCLAIMERS
+===========
+
+   Copyright (c) 1998 Bek Oberin. All rights reserved. 
+   This program is free software; you can redistribute it and/or
+   modify it under the same terms as Perl itself.
+
+
 

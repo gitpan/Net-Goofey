@@ -37,7 +37,7 @@ use ExtUtils::MakeMaker;
 # the contents of the Makefile that is written.
 WriteMakefile(
     'NAME'	=> 'Net::Goofey',
-    'VERSION_FROM' => 'Goofey.pm', # finds $VERSION
+    'VERSION_FROM' => 'lib/Net/Goofey.pm', # finds $VERSION
     'dist'         => {
                          COMPRESS => 'gzip -9f',
                          SUFFIX => 'gz',
@@ -50,7 +50,7 @@ sub MY::postamble {
 
    '
 
-WEBDIR = /home/gossamer/websrc/docs/code
+WEBDIR = /home/gossamer/web/netizen/homepage/code
 WEB_FILELIST = $(WEBDIR)/file-list
 
 webdist: dist

@@ -7,23 +7,23 @@
 #    free software; you can redistribute it and/or modify it under the
 #    same terms as Perl itself.
 # 
-# Last updated by gossamer on Fri Aug 28 17:31:20 EST 1998
+# Last updated by gossamer on Mon May 17 15:22:06 EST 1999
 #
 
 use strict;
+
 use Getopt::Std;
-
 use Text::LineEditor;
-
 use Net::Goofey;
 
 
 my %opt;
+my $DEBUG;
 
 sub die_nicely {
    my $signal = shift;
 
-   print STDERR "Goofey got signal $signal, exiting.\n";
+   print STDERR "Perlgoofey got signal $signal, exiting.\n";
    exit;
 
 }
@@ -46,14 +46,14 @@ if ($opt{"h"}) {
    exit;
 } elsif ($opt{"v"}) {
    # version number
-   print "Basic Net::Goofey client built with " . Net::Goofey::version() . "\n";
+   print "Perlgoofey\nBasic Net::Goofey client built with " . Net::Goofey::version() . "\n";
    exit;
 }
 
 # every other option requires a goofey connection so do it here
 my $Goofey = Net::Goofey->new();
 if (!$Goofey) {
-   die "Failed to connect to Goofey server: $!\n";
+   die "Perlgoofey failed to connect to Goofey server: $!\n";
 }
 
 # Go through other options
@@ -92,12 +92,14 @@ if ($opt{"w"}) {
       # else continue
       my($message_type, $message_data) = $Goofey->listen();
 
-      print STDERR "Client:  message type:  '$message_type'\n";
-      print STDERR "Client:  message data:  '$message_data'\n";
+      warn "Client:  message type:  '$message_type'\n" if $DEBUG;
+      warn "Client:  message data:  '$message_data'\n" if $DEBUG;
 
-      if ($message_type eq $Goofey_Exit) {
+      if ($message_type eq $Messages{"exit"}) {
          die "Goofey:  Died at server request.\n";
-      } elsif ($message_type eq $Goofey_Message) {
+      } elsif ($message_type eq $Messages{"idle"}) {
+         # nothing
+      } elsif ($message_type eq $Messages{"message"}) {
          print "Goofey Message:\n$message_data\n\n";
       } else {
          die "Goofey:  Unknown message type: '$message_type'";

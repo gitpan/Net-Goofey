@@ -7,11 +7,11 @@ package Net::Goofey;
 #    free software; you can redistribute it and/or modify it under the
 #    same terms as Perl itself.
 # 
-# Last updated by gossamer on Fri Aug 28 17:30:59 EST 1998
+# Last updated by gossamer on Mon May 17 15:21:57 EST 1999
 #
 
 use strict;
-use vars qw($VERSION @ISA @EXPORT @EXPORT_OK);
+use vars qw($VERSION @ISA @EXPORT @EXPORT_OK %Messages);
 
 require Exporter;
 
@@ -22,9 +22,9 @@ use Fcntl;
 use Carp;
 
 @ISA = qw(Exporter);
-@EXPORT = qw( $Goofey_Exit $Goofey_Message );
+@EXPORT = qw( %Messages );
 @EXPORT_OK = qw();
-$VERSION = "0.9";
+$VERSION = "1.1";
 
 
 =head1 NAME
@@ -50,15 +50,17 @@ Perl.
 ###################################################################
 
 # Messages returned by server
-my $Goofey_Exit = 'E';
-my $Goofey_Idletime = 'W';
-my $Goofey_Message = 'Z';
+%Messages = (
+   "exit" => "E",
+   "idle" => "W",
+   "message" => "Z",
+);
 
 my $Default_Goofey_Port = 3987;
 my $Default_Goofey_Host = "pluto.cc.monash.edu.au";
 
 my $Client_Type = "G";
-my $Client_Version = "3.51";  # This matches the ver of the base client we are imitating
+my $Client_Version = "3.51";  # Version of the base client we are imitating
 
 my $Password_File = $ENV{"HOME"} . "/.goofeypw";
 
@@ -134,7 +136,8 @@ sub DESTROY {
 }
 
 
-=head1 signon ( );
+=head1 FUNCTIONS
+=item signon ( );
 
 Register this client as the resident one.
 
@@ -151,7 +154,8 @@ sub signon {
 
 }
 
-=head1 send ( USERNAME, MESSAGE );
+=pod
+=item send ( USERNAME, MESSAGE );
 
 Send a message to a goofey user 
 (Will clients handle their own iteration for multi-user messages, or
@@ -167,7 +171,8 @@ sub send {
    return $self->do_message("s $username $message");
 }
 
-=head1 unsend ( USERNAME );
+=pod
+=item unsend ( USERNAME );
 
 Delete your last message to USERNAME, provided (of course) they 
 haven't read it.
@@ -182,7 +187,8 @@ sub unsend {
    return $self->do_message("s! $username");
 }
 
-=head1 who ([USERNAME]);
+=pod
+=item who ([USERNAME]);
 
 List  that  user's  finger  information.
 
@@ -195,7 +201,8 @@ sub who {
    return $self->do_message("w $username");
 }
 
-=head1 list ([USERNAME]);
+=pod
+=item list ([USERNAME]);
 
 List the locations and idle times of user.  If user is empty then all
 users are listed, but their  idle times  are not queried: the last
@@ -210,7 +217,8 @@ sub list {
    return $self->do_message("l $username");
 }
 
-=head1 quiet ();
+=pod
+=item quiet ();
 
 Sets you quiet.  The server will then keep your messages until you
 unquiet.  This mode lets through messages from anybody on your unquiet
@@ -224,7 +232,8 @@ sub quiet {
    return $self->do_message("Q-");
 }
 
-=head1 quietall ();
+=pod
+=item quietall ();
 
 Sets you quiet to everybody.
 
@@ -236,7 +245,8 @@ sub quietall {
    return $self->do_message("Q!");
 }
 
-=head1 unquiet ();
+=pod
+=item unquiet ();
 
 Sets you unquiet.
 
@@ -248,7 +258,8 @@ sub unquiet {
    return $self->do_message("Q+");
 }
 
-=head1 listen ( );
+=pod
+=item listen ( );
 
 Listens for a command from the Goofey server.  If we don't already
 have an open port to them, opens it.
@@ -258,52 +269,53 @@ have an open port to them, opens it.
 sub listen {
    my $self = shift;
 
-   my $done;
-   my ($message_type, $message);
+   my ($message_type, $message_text, $message);
 
-   do {
-      if (!$self->{"incoming_socket"}) {
-         # open the connection
-         $self->{"incoming_socket"} = new IO::Socket::INET (
-            Proto => "tcp",
-            LocalPort => $self->{"incoming_port"},
-            Listen => 1,
-            Reuse => 1,
-         );
-         croak "new: incoming socket: $!" unless $self->{"incoming_socket"};
-      }
+   if (!$self->{"incoming_socket"}) {
+      # open the connection
+      $self->{"incoming_socket"} = new IO::Socket::INET (
+         Proto => "tcp",
+         LocalPort => $self->{"incoming_port"},
+         Listen => 1,
+         Reuse => 1,
+      );
+      croak "incoming socket: $!" unless $self->{"incoming_socket"};
+   }
 
-      # listening ...
-      my $client = $self->{"incoming_socket"}->accept();
+   # listening ...
+   my $client = $self->{"incoming_socket"}->accept();
 
-      while (<$client>) {
-         $message .= $_;
-      }
+   while (<$client>) {
+      $message .= $_;
+   }
 
-      #($message_type, $message) = $message =~ /^(.)\s+(.*)$/;
-      #($message_type, $message) = $message =~ /^(.)\s+(.*)$/;
-      $message_type = substr($message,0,1);
-      substr($message,0,1) = "";
-      print STDERR "Message Type: '$message_type'\n" if $DEBUG;
-      print STDERR "Message: '$message'\n" if $DEBUG;
+   #($message_type, $message_text) = ($message =~ /^(.)(.*)$/);
+   $message_type = substr($message,0,1);
+   substr($message,0,1) = ""; $message_text = $message;
+   warn "Message Type: '$message_type'\n" if $DEBUG;
+   warn "Message: '$message_text'\n" if $DEBUG;
 
+   if ($message_type eq $Messages{"message"}) {
+      # trim off random weirdness
+      # **** A message has arrived from pluto on Mon May 17 11:29! ****
+      #$message_text =~ s/^\s*\*\*\*\* A message has arrived from (\S+) on ([^!]+)\! \*\*\*\*\s*//s;
+      $message_text =~ s/^\s*\*\*\*\*.*\*\*\*\*\s*//s;
 
-      if ($message_type eq $Goofey_Idletime) {
-         print $client &get_idletime();
-         $done = 0;
-      } elsif ($message_type eq $Goofey_Message) {
-         print $message;
-      } else {
-         $done = 1;
-      }
-      close $client;
-   } until $done;
+   }
 
-   return $message_type, $message;
+   if ($message_type eq $Messages{"idle"}) {
+      warn "Returning idletime ..." if $DEBUG;
+      print $client &get_idletime();
+   }
+   
+   close $client;
+
+   return $message_type, $message_text;
 
 }
 
-=head1 version ( );
+=pod
+=item version ( );
 
 Returns version information.
 
