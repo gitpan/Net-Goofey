@@ -24,7 +24,7 @@ use Carp;
 @ISA = qw(Exporter);
 @EXPORT = qw( %Messages );
 @EXPORT_OK = qw();
-$VERSION = "1.1";
+$VERSION = "1.4";
 
 
 =head1 NAME
@@ -188,6 +188,26 @@ sub unsend {
 }
 
 =pod
+=item register ([COMMAND]);
+
+Register for goofey.
+
+Valid commands:
+   create          Register new user
+   sendpw          Request your existing password be emailed to you
+   alias <name>    Register this machine as an alias
+   request <name>  Request another goofey name to alias current one
+
+=cut
+
+sub register {
+   my $self = shift;
+   my $argument = shift;
+
+   return $self->do_message("N $argument");
+}
+
+=pod
 =item who ([USERNAME]);
 
 List  that  user's  finger  information.
@@ -228,8 +248,9 @@ alias, though.
 
 sub quiet {
    my $self = shift;
+   my $quietmsg = shift;
    
-   return $self->do_message("Q-");
+   return $self->do_message("Q- $quietmsg");
 }
 
 =pod
@@ -241,8 +262,23 @@ Sets you quiet to everybody.
 
 sub quietall {
    my $self = shift;
+   my $quietmsg = shift;
    
-   return $self->do_message("Q!");
+   return $self->do_message("Q! $quietmsg");
+}
+
+=pod
+=item repeat ();
+
+Repeats certain messages
+
+=cut
+
+sub repeat {
+   my $self = shift;
+   my $which = shift;
+   
+   return $self->do_message("r $which");
 }
 
 =pod
@@ -256,6 +292,23 @@ sub unquiet {
    my $self = shift;
    
    return $self->do_message("Q+");
+}
+
+=pod
+=item killclient ();
+
+Sets you unquiet.
+
+=cut
+
+sub killclient {
+   my $self = shift;
+   my $which = shift;
+   my $killmsg = shift;
+  
+   $which = "" if $which eq "this";
+   $killmsg = "- " . $killmsg if $killmsg;
+   return $self->do_message("x $which $killmsg");
 }
 
 =pod
@@ -394,7 +447,8 @@ sub build_message {
 sub find_password {
    my $password = "";
 
-   open(PWD, $Password_File) || warn "Can't open password file '$Password_File': $!"; 
+   open(PWD, $Password_File) || 
+      warn "Can't open password file '$Password_File': $!"; 
    $password = <PWD>;
    chomp($password);
    close(PWD);
@@ -419,11 +473,11 @@ sub find_incoming_port {
 
 =head1 AUTHOR
 
-Bek Oberin <gossamer@tertius.net.au>
+Bek Oberin <bekj@netizen.com.au>
 
 =head1 CREDITS
 
-Kirrily Robert <skud@monash.edu.au>
+Kirrily Robert <skud@netizen.com.au>
 
 =head1 COPYRIGHT
 
